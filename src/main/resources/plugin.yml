@@ -1,0 +1,63 @@
+name: SGuilds
+version: '${project.version}'
+main: me.sirius.sguilds.SGuilds
+api-version: '1.21'
+author: Sirius
+description: Sistema de farmeo por gremios con recompensas por tiers.
+
+# Sin SiriusCore.jar, Bukkit ni intenta cargar este plugin.
+depend:
+  - SiriusCore
+
+commands:
+  sguilds:
+    description: Comando principal de SGuilds
+    aliases: [sg, farmeo]
+    usage: /sguilds <reload|stats|reset>
+
+permissions:
+  sguilds.admin:
+    description: Acceso a comandos de administración
+    default: op
+
+  farmeo.vip:
+    description: Acceso a tiers 1-6 en los 3 sistemas de farmeo
+    default: false
+
+  farmeo.vip2:
+    description: Acceso a todos los tiers (1-11) en los 3 sistemas de farmeo
+    default: false
+
+  farmeo.tier1:
+    description: Acceso al tier 1
+    default: false
+  farmeo.tier2:
+    description: Acceso al tier 2
+    default: false
+  farmeo.tier3:
+    description: Acceso al tier 3
+    default: false
+  farmeo.tier4:
+    description: Acceso al tier 4
+    default: false
+  farmeo.tier5:
+    description: Acceso al tier 5
+    default: false
+  farmeo.tier6:
+    description: Acceso al tier 6
+    default: false
+  farmeo.tier7:
+    description: Acceso al tier 7 (requiere VIP2)
+    default: false
+  farmeo.tier8:
+    description: Acceso al tier 8 (requiere VIP2)
+    default: false
+  farmeo.tier9:
+    description: Acceso al tier 9 (requiere VIP2)
+    default: false
+  farmeo.tier10:
+    description: Acceso al tier 10 (requiere VIP2)
+    default: false
+  farmeo.tier11:
+    description: Acceso al tier 11 (requiere VIP2)
+    default: false
