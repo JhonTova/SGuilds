@@ -4,6 +4,7 @@ import me.sirius.core.text.Text;
 import me.sirius.sguilds.SGuilds;
 import me.sirius.sguilds.managers.ConfigManager;
 import me.sirius.sguilds.managers.DataManager;
+import me.sirius.sguilds.models.Categoria;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class FarmeoCommand implements CommandExecutor, TabCompleter {
@@ -32,13 +34,13 @@ public final class FarmeoCommand implements CommandExecutor, TabCompleter {
                              @NotNull String label,
                              @NotNull String[] args) {
 
-        if (!sender.hasPermission("sguilds.admin")) {
-            Text.send(sender, config.getMsgSinPermiso());
+        if (!sender.hasPermission(config.getPermisoAdmin())) {
+            Text.send(sender, config.getMensaje("sin-permiso"));
             return true;
         }
 
         if (args.length == 0) {
-            Text.send(sender, config.getMsgUsoComando());
+            Text.send(sender, config.getMensaje("uso-comando"));
             return true;
         }
 
@@ -46,14 +48,14 @@ public final class FarmeoCommand implements CommandExecutor, TabCompleter {
             case "reload" -> handleReload(sender);
             case "stats"  -> handleStats(sender, args);
             case "reset"  -> handleReset(sender, args);
-            default       -> Text.send(sender, config.getMsgUsoComando());
+            default       -> Text.send(sender, config.getMensaje("uso-comando"));
         }
         return true;
     }
 
     private void handleReload(CommandSender sender) {
         config.reload();
-        Text.send(sender, config.getMsgReloadOk());
+        Text.send(sender, config.getMensaje("reload-ok"));
     }
 
     private void handleStats(CommandSender sender, String[] args) {
@@ -61,10 +63,15 @@ public final class FarmeoCommand implements CommandExecutor, TabCompleter {
         if (target == null) return;
 
         UUID uuid = target.getUniqueId();
-        Text.send(sender, "<#FF1493><bold>SGuilds</bold> <gray>— Stats de <white>" + target.getName());
-        Text.send(sender, "<gray>  Cultivos : <white>" + data.getCultivos(uuid));
-        Text.send(sender, "<gray>  Minerales: <white>" + data.getMinerales(uuid));
-        Text.send(sender, "<gray>  Maderas  : <white>" + data.getMaderas(uuid));
+        Map<String, Integer> contadores = data.getContadores(uuid);
+
+        Text.send(sender, config.getMensaje("stats-titulo").replace("{player}", target.getName()));
+        String formato = config.getMensaje("stats-linea");
+        for (Categoria categoria : config.getCategorias()) {
+            Text.send(sender, formato
+                    .replace("{categoria}", categoria.nombre())
+                    .replace("{valor}", String.valueOf(contadores.getOrDefault(categoria.id(), 0))));
+        }
     }
 
     private void handleReset(CommandSender sender, String[] args) {
@@ -72,7 +79,7 @@ public final class FarmeoCommand implements CommandExecutor, TabCompleter {
         if (target == null) return;
 
         data.resetAll(target.getUniqueId());
-        Text.send(sender, "<green>Contadores de <white>" + target.getName() + "<green> reseteados.");
+        Text.send(sender, config.getMensaje("reset-ok").replace("{player}", target.getName()));
     }
 
     @Nullable
@@ -80,13 +87,13 @@ public final class FarmeoCommand implements CommandExecutor, TabCompleter {
         if (args.length >= 2) {
             Player p = Bukkit.getPlayerExact(args[1]);
             if (p == null) {
-                Text.send(sender, config.getMsgJugadorNoEncontrado());
+                Text.send(sender, config.getMensaje("jugador-no-encontrado"));
                 return null;
             }
             return p;
         }
         if (sender instanceof Player p) return p;
-        Text.send(sender, "<red>Especifica un jugador: /sguilds stats <jugador>");
+        Text.send(sender, config.getMensaje("especifica-jugador"));
         return null;
     }
 
@@ -95,7 +102,7 @@ public final class FarmeoCommand implements CommandExecutor, TabCompleter {
                                                 @NotNull Command command,
                                                 @NotNull String label,
                                                 @NotNull String[] args) {
-        if (!sender.hasPermission("sguilds.admin")) return List.of();
+        if (!sender.hasPermission(config.getPermisoAdmin())) return List.of();
 
         if (args.length == 1) {
             return List.of("reload", "stats", "reset").stream()

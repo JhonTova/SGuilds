@@ -3,7 +3,7 @@ version: '${project.version}'
 main: me.sirius.sguilds.SGuilds
 api-version: '1.21'
 author: Sirius
-description: Sistema de farmeo por gremios con recompensas por tiers.
+description: Sistema de farmeo configurable con recompensas por tiers.
 
 # Sin SiriusCore.jar, Bukkit ni intenta cargar este plugin.
 depend:
@@ -20,12 +20,16 @@ permissions:
     description: Acceso a comandos de administración
     default: op
 
+  sguilds.bypass:
+    description: Ignora el bloqueo por tier en todas las categorías
+    default: op
+
   farmeo.vip:
-    description: Acceso a tiers 1-6 en los 3 sistemas de farmeo
+    description: Acceso a los tiers que no exigen VIP2
     default: false
 
   farmeo.vip2:
-    description: Acceso a todos los tiers (1-11) en los 3 sistemas de farmeo
+    description: Acceso a todos los tiers
     default: false
 
   farmeo.tier1:

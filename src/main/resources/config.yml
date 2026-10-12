@@ -1,247 +1,366 @@
 # ============================================================
 #   SGuilds - Desarrollado por Sirius
-#   Sistema de farmeo por gremios con recompensas por tiers
+#   Sistema de farmeo con recompensas por tiers
 # ============================================================
 #
 #  ¿CÓMO FUNCIONA?
 #  ───────────────
-#  Cuando un jugador rompe un bloque en el mundo configurado,
-#  se incrementa su contador (cultivos, minerales o maderas).
-#  Al llegar al "umbral" del tier, se lanza el dado de recompensa.
-#  Si gana, se ejecuta un comando de consola con {player}.
+#  Cuando un jugador rompe un bloque listado en una categoría, y lo hace
+#  en un mundo donde esa categoría está activa, sube su contador de esa
+#  categoría. Al llegar al "umbral" del tier del bloque se lanza el dado
+#  de recompensa y el contador vuelve a cero.
 #
-#  TIERS — Cada bloque tiene un tier asignado en el código:
-#  ──────────────────────────────────────────────────────────
-#  CULTIVOS:
-#    Tier 0  → Wheat (trigo)          — libre, sin permiso
-#    Tier 1  → Carrots                — farmeo.tier1 / VIP
-#    Tier 2  → Potatoes               — farmeo.tier2 / VIP
-#    Tier 3  → Beetroots              — farmeo.tier3 / VIP
-#    Tier 4  → Pumpkin                — farmeo.tier4 / VIP
-#    Tier 5  → Melon                  — farmeo.tier5 / VIP
-#    Tier 6  → Nether Wart            — farmeo.tier6 / VIP
-#    Tier 7  → Cocoa                  — farmeo.tier7 / VIP2
-#    Tier 8  → Sugar Cane             — farmeo.tier8 / VIP2
-#    Tier 9  → Cactus                 — farmeo.tier9 / VIP2
-#    Tier 10 → Bamboo, Kelp, Mushrooms— farmeo.tier10 / VIP2
+#  TODO es configurable desde aquí: los mundos, las categorías, qué
+#  bloque pertenece a qué categoría y tier, los umbrales, los permisos,
+#  las raridades y las recompensas.
 #
-#  MINERALES:
-#    Tier 0  → Coal Ore               — libre, sin permiso
-#    Tier 1  → Copper Ore             — farmeo.tier1 / VIP
-#    Tier 2  → Iron Ore               — farmeo.tier2 / VIP
-#    Tier 3  → Nether Quartz Ore      — farmeo.tier3 / VIP
-#    Tier 4  → Gold Ore               — farmeo.tier4 / VIP
-#    Tier 5  → Redstone Ore           — farmeo.tier5 / VIP
-#    Tier 6  → Lapis Ore              — farmeo.tier6 / VIP
-#    Tier 7  → Nether Gold Ore        — farmeo.tier7 / VIP2
-#    Tier 8  → Amethyst Cluster       — farmeo.tier8 / VIP2
-#    Tier 9  → Diamond Ore            — farmeo.tier9 / VIP2
-#    Tier 10 → Emerald Ore            — farmeo.tier10 / VIP2
-#    Tier 11 → Ancient Debris         — farmeo.tier11 / VIP2
-#
-#  MADERAS:
-#    Tier 0  → Oak Log                — libre, sin permiso
-#    Tier 1  → Spruce Log             — farmeo.tier1 / VIP
-#    Tier 2  → Birch Log              — farmeo.tier2 / VIP
-#    Tier 3  → Jungle Log             — farmeo.tier3 / VIP
-#    Tier 4  → Acacia Log             — farmeo.tier4 / VIP
-#    Tier 5  → Dark Oak Log           — farmeo.tier5 / VIP
-#    Tier 6  → Mangrove Log           — farmeo.tier6 / VIP
-#    Tier 7  → Cherry Log             — farmeo.tier7 / VIP2
-#    Tier 8  → Crimson Stem           — farmeo.tier8 / VIP2
-#    Tier 9  → Warped Stem            — farmeo.tier9 / VIP2
-#
-#  PERMISOS:
-#  ─────────
-#    farmeo.vip    → accede a tiers 1-6 en los 3 sistemas
-#    farmeo.vip2   → accede a tiers 1-11 en los 3 sistemas
-#    farmeo.tierX  → accede solo al tier X (en los 3 sistemas)
-#
-#  NOTA: El permiso "farmeo.tier1" da acceso al tier 1 en
-#  cultivos (carrots), minerales (copper) y maderas (spruce)
-#  al mismo tiempo. Es un permiso global por número de tier.
+#  NOTA: el conteo solo ocurre si el bloque se rompe DE VERDAD. Si una
+#  protección (WorldGuard, claims, spawn protegido...) cancela la rotura,
+#  el jugador puede ver el bloque desaparecer un instante en su pantalla,
+#  pero no suma ni entrega recompensas.
 #
 # ============================================================
 
-# Mundo donde aplica el sistema de farmeo
-mundo: gremio
 
-# Mensajes del sistema (soporta colores hex: <#RRGGBB> y códigos &)
+# ============================================================
+# MUNDOS
+#
+#  mundos            → lista de mundos donde funciona el farmeo.
+#  todos-los-mundos  → true ignora la lista y activa el sistema en
+#                      todos los mundos del servidor.
+#
+#  Cada categoría puede sobrescribir esto con su propia lista
+#  (ver más abajo, en la sección "categorias").
+# ============================================================
+todos-los-mundos: false
+mundos:
+  - cultivos
+
+
+# ============================================================
+# PERMISOS — Los nodos son configurables.
+#
+#  admin          → acceso a /sguilds reload|stats|reset
+#  bypass         → salta cualquier bloqueo por tier. Viene vacio
+#                   (desactivado). Ponle "sguilds.bypass" si quieres
+#                   que el staff pueda romper cualquier tier.
+#  vip            → acceso a los tiers con requiere-vip2: false
+#  vip2           → acceso a todos los tiers
+#  tier           → permiso por número de tier ({tier})
+#                   Sirve para los tiers de TODAS las categorías.
+#  categoria-tier → permiso por categoría + tier ({categoria}, {tier}).
+#                   Déjalo vacío ("") si no lo quieres usar.
+#                   Ejemplo: "farmeo.{categoria}.tier{tier}" permite dar
+#                   acceso al tier 3 solo en minerales.
+#
+#  Cualquier nodo que dejes vacío ("") queda desactivado.
+# ============================================================
+permisos:
+  admin: "sguilds.admin"
+  bypass: ""
+  vip: "farmeo.vip"
+  vip2: "farmeo.vip2"
+  tier: "farmeo.tier{tier}"
+  categoria-tier: ""
+
+
+# ============================================================
+# MENSAJES
+#
+#  Soporta colores hex (<#RRGGBB>), códigos legacy (&a &l &r...) y
+#  etiquetas MiniMessage (<gray>, <bold>...).
+#  {prefijo} inserta el prefijo definido aquí abajo.
+#  Un mensaje vacío ("") no se envía.
+# ============================================================
 mensajes:
   prefijo: "<#FF1493>&lSGuilds &8»&r"
-  cultivo-bloqueado: "<#FF1493>&lSakura &c⛔ Cultivo bloqueado"
-  mineral-bloqueado: "<#FF1493>&lSakura &c⛔ Mineral bloqueado"
-  madera-bloqueada: "<#FF1493>&lSakura &c⛔ Madera bloqueada"
-  requiere-vip2: "&7Este bloque requiere &d&lVIP2 &7o el rango correspondiente"
-  requiere-rango: "&7Mejora tu rango con &e/rankup &7u obtén &b&lVIP &7en &e/tienda"
-  reload-ok: "&aConfiguración recargada correctamente."
-  sin-permiso: "&cNo tienes permiso para ejecutar este comando."
-  uso-comando: "&7Uso: &e/sguilds <reload|stats [jugador]|reset [jugador]>"
-  jugador-no-encontrado: "&cJugador no encontrado."
+  bloque-bloqueado: "<#FF1493>&lSakura &c⛔ Bloque bloqueado"
+  requiere-vip2: "&7No tienes el rankup suficiente para romper este bloque."
+  requiere-rango: "&7Mejora tu rango con &e/rankup &7para desbloquearlo."
+  reload-ok: "{prefijo} &aConfiguración recargada correctamente."
+  sin-permiso: "{prefijo} &cNo tienes permiso para ejecutar este comando."
+  uso-comando: "{prefijo} &7Uso: &e/sguilds <reload|stats [jugador]|reset [jugador]>"
+  jugador-no-encontrado: "{prefijo} &cJugador no encontrado."
+  especifica-jugador: "{prefijo} &cEspecifica un jugador: &e/sguilds stats <jugador>"
+  stats-titulo: "{prefijo} &7Stats de &f{player}"
+  stats-linea: "&7  {categoria}: &f{valor}"
+  reset-ok: "{prefijo} &aContadores de &f{player} &areseteados."
+
 
 # ============================================================
-# RECOMPENSAS — Cada raridad tiene 3 opciones (se elige 1 al azar)
+# RECOMPENSAS — Cada raridad tiene una lista de opciones.
+#  Al ganar se elige UNA opción al azar (todas con la misma
+#  probabilidad). Puedes poner las que quieras: 1, 3, 10...
 #
-#  comando-X → comando que ejecuta la consola al ganar
-#              Usa {player} como placeholder del nombre del jugador
-#              Ejemplo: "mi give MATERIAL CRISTAL_YOKAI {player} 1 0 100 0 s"
+#  mensaje  → lo que recibe el jugador. Usa \n para varias líneas.
+#  comandos → lista de comandos que ejecuta la consola.
 #
-#  mensaje-X → mensaje que recibe el jugador al ganar
-#              Soporta colores hex: <#FF1493>
-#              Soporta códigos legacy: &l &r &7 &c &e &b &d &f &a
-#              Para multilínea usa \n
+#  Placeholders disponibles en mensajes y comandos:
+#    {player}    → nombre del jugador
+#    {categoria} → nombre de la categoría (Cultivos, Minerales...)
+#    {tier}      → tier del bloque que completó el umbral
+#    {raridad}   → id de la raridad que salió
+#
+#  Puedes crear las raridades que quieras: el id que pongas aquí
+#  (comun, raro, mitico, evento...) es el que usarás en "tiers".
 # ============================================================
 recompensas:
   comun:
-    mensaje-1: "<#FF1493>&l✦ &fObtuviste un <#FF6B9D>&lCristal Yokai&f!"
-    comando-1: "mi give MATERIAL CRISTAL_YOKAI {player} 1 0 100 0 s"
-    mensaje-2: "<#FF1493>&l✦ &fObtuviste un <#8B0000>&lCristal Oni&f!"
-    comando-2: "mi give MATERIAL CRISTAL_ONI {player} 1 0 100 0 s"
-    mensaje-3: "<#FF1493>&l✦ &fObtuviste un <#CCCCCC>&lFragmento de Zen&f!"
-    comando-3: "mi give MATERIAL FRAGMENTO_ZEN {player} 1 0 100 0 s"
+    opciones:
+      - mensaje: "<#FF1493>&l✦ &fObtuviste un <#FFD700>&lOro Compacto&f!"
+        comandos:
+          - "mi give MATERIAL ORO_COMPACTO {player} 1 0 100 0 s"
+      - mensaje: "<#FF1493>&l✦ &fObtuviste <#7CFC00>&l$500&f!"
+        comandos:
+          - "eco give {player} 500"
+      - mensaje: "<#FF1493>&l✦ &fObtuviste un <#B0C4DE>&lFragmento Zen&f!"
+        comandos:
+          - "mi give MATERIAL FRAGMENTO_ZEN {player} 1 0 100 0 s"
 
   raro:
-    mensaje-1: "<#FF1493>&l✦✦ &fObtuviste un <#FFB6C1>&lCristal Geisha&f!"
-    comando-1: "mi give MATERIAL CRISTAL_GEISHA {player} 1 0 100 0 s"
-    mensaje-2: "<#FF1493>&l✦✦ &fObtuviste un <#FF1493>&lCristal Loto&f!"
-    comando-2: "mi give MATERIAL CRISTAL_LOTO {player} 1 0 100 0 s"
-    mensaje-3: "<#FF1493>&l✦✦ &fObtuviste un <#00DD00>&lFragmento de Jade&f!"
-    comando-3: "mi give MATERIAL FRAGMENTO_JADE {player} 1 0 100 0 s"
+    opciones:
+      - mensaje: "<#FF1493>&l✦✦ &fObtuviste un <#FFD700>&lOro Compacto&f!"
+        comandos:
+          - "mi give MATERIAL ORO_COMPACTO {player} 1 0 100 0 s"
+      - mensaje: "<#FF1493>&l✦✦ &fObtuviste un <#B9F2FF>&lDiamante Compacto&f!"
+        comandos:
+          - "mi give MATERIAL DIAMANTE_COMPACTO {player} 1 0 100 0 s"
+      - mensaje: "<#FF1493>&l✦✦ &fObtuviste un <#00A86B>&lFragmento de Jade&f!"
+        comandos:
+          - "mi give MATERIAL FRAGMENTO_JADE {player} 1 0 100 0 s"
 
   ultrararo:
-    mensaje-1: "<#FF1493>&l✦✦✦ &fObtuviste un <#C0C0C0>&lCristal Samurai&f!"
-    comando-1: "mi give MATERIAL CRISTAL_SAMURAI {player} 1 0 100 0 s"
-    mensaje-2: "<#FF1493>&l✦✦✦ &fObtuviste un <#FF69B4>&lCristal Sakura&f!"
-    comando-2: "mi give MATERIAL CRISTAL_SAKURA {player} 1 0 100 0 s"
-    mensaje-3: "<#FF1493>&l✦✦✦ &fObtuviste un <#ADD8E6>&lFragmento de Cristal&f!"
-    comando-3: "mi give MATERIAL FRAGMENTO_CRISTAL {player} 1 0 100 0 s"
+    opciones:
+      - mensaje: "<#FF1493>&l✦✦✦ &fObtuviste un <#B9F2FF>&lDiamante Compacto&f!"
+        comandos:
+          - "mi give MATERIAL DIAMANTE_COMPACTO {player} 1 0 100 0 s"
+      - mensaje: "<#FF1493>&l✦✦✦ &fObtuviste <#7CFC00>&l$5.000&f!"
+        comandos:
+          - "eco give {player} 5000"
+      - mensaje: "<#FF1493>&l✦✦✦ &fObtuviste un <#B9F2FF>&lFragmento de Cristal&f!"
+        comandos:
+          - "mi give MATERIAL FRAGMENTO_CRISTAL {player} 1 0 100 0 s"
 
   legendario:
-    mensaje-1: "<#FF1493>&l★ Tesoro legendario descubierto ★\n&fObtuviste un <#4B0082>&lCristal Tengu&f!"
-    comando-1: "mi give MATERIAL CRISTAL_TENGU {player} 1 0 100 0 s"
-    mensaje-2: "<#FF1493>&l★ Tesoro legendario descubierto ★\n&fObtuviste un <#FFD700>&lCristal Taiyo&f!"
-    comando-2: "mi give MATERIAL CRISTAL_TAIYO {player} 1 0 100 0 s"
-    mensaje-3: "<#FF1493>&l★ Tesoro legendario descubierto ★\n&fObtuviste un <#EE00FF>&lFragmento de Loto&f!"
-    comando-3: "mi give MATERIAL FRAGMENTO_LOTO {player} 1 0 100 0 s"
+    opciones:
+      - mensaje: "<#FF1493>&l★ Tesoro legendario descubierto ★\n&fObtuviste un <#8B8B8B>&lNetherita Compacta&f!"
+        comandos:
+          - "mi give MATERIAL NETHERITA_COMPACTA {player} 1 0 100 0 s"
+      - mensaje: "<#FF1493>&l★ Tesoro legendario descubierto ★\n&fObtuviste <#7CFC00>&l$25.000&f!"
+        comandos:
+          - "eco give {player} 25000"
+      - mensaje: "<#FF1493>&l★ Tesoro legendario descubierto ★\n&fObtuviste un <#FFB7C5>&lFragmento de Loto&f!\n&7Los pétalos se aquietan a tu paso..."
+        comandos:
+          - "mi give MATERIAL FRAGMENTO_LOTO {player} 1 0 100 0 s"
 
   ultralegendario:
-    mensaje-1: "<#FF1493>&l✦ ★ Mito hecho realidad ★ ✦\n&fObtuviste un <#E0E0FF>&lCristal Tsuki&f!\n&7La luna te ha elegido..."
-    comando-1: "mi give MATERIAL CRISTAL_TSUKI {player} 1 0 100 0 s"
-    mensaje-2: "<#FF1493>&l✦ ★ Mito hecho realidad ★ ✦\n&fObtuviste un <#FF9EFF>&lCristal Neko&f!\n&7Los espíritus ancestrales te sonríen..."
-    comando-2: "mi give MATERIAL CRISTAL_NEKO {player} 1 0 100 0 s"
-    mensaje-3: "<#FF1493>&l✦ ★ Mito hecho realidad ★ ✦\n&fObtuviste un <#FFFACD>&lFragmento Ancestral&f!\n&7El universo te reconoce..."
-    comando-3: "mi give MATERIAL FRAGMENTO_ANCESTRAL {player} 1 0 100 0 s"
+    opciones:
+      - mensaje: "<#FF1493>&l✦ ★ Mito hecho realidad ★ ✦\n&fObtuviste un <#8B8B8B>&lNetherita Compacta&f!\n&7La luna te ha elegido..."
+        comandos:
+          - "mi give MATERIAL NETHERITA_COMPACTA {player} 1 0 100 0 s"
+      - mensaje: "<#FF1493>&l✦ ★ Mito hecho realidad ★ ✦\n&fObtuviste <#7CFC00>&l$100.000&f!\n&7Los espíritus ancestrales te sonríen..."
+        comandos:
+          - "eco give {player} 100000"
+      - mensaje: "<#FF1493>&l✦ ★ Mito hecho realidad ★ ✦\n&fObtuviste un <#FFD700>&lFragmento Ancestral&f!\n&7El universo te reconoce..."
+        comandos:
+          - "mi give MATERIAL FRAGMENTO_ANCESTRAL {player} 1 0 100 0 s"
+
 
 # ============================================================
-# TIERS — Probabilidades y umbrales por nivel
+# TIERS — Umbrales, permisos y probabilidades por nivel.
+#  Estos son los tiers GLOBALES. Cada categoría puede definir su
+#  propia sección "tiers" para sobrescribir los que quiera.
 #
-#  umbral      → cuántos bloques hay que romper para tirar el dado
-#  requiere-vip2 → true = solo VIP2 o permiso específico del tier
-#                  false = VIP normal también puede acceder
+#  umbral           → bloques a romper para tirar el dado
+#  requiere-permiso → false = cualquiera puede romperlo (tier libre).
+#                     Si no lo pones, el tier 0 es libre y el resto no.
+#  requiere-vip2    → true  = solo vip2 o el permiso del tier
+#                     false = el permiso vip normal también sirve
 #
-#  recompensas → lista de raridades que pueden salir en ese tier
-#    raridad   → COMUN | RARO | ULTRARARO | LEGENDARIO | ULTRALEGENDARIO
-#    chance    → probabilidad en % (0.0 - 100.0)
-#               Se evalúan en orden: la primera que pase gana.
-#               Si ninguna pasa, no se entrega nada (mala suerte).
+#  recompensas → raridades que pueden salir, evaluadas EN ORDEN.
+#    raridad → id definido arriba en "recompensas"
+#    chance  → probabilidad en % (0.0 - 100.0)
 #
 #  Ejemplo: tier 2 tiene Raro 3% y Común 10%.
-#    → Si el dado cae en los primeros 3%  → recompensa Rara
-#    → Si el dado cae entre 3% y 13%      → recompensa Común
-#    → Si el dado cae entre 13% y 100%    → nada
-#
-#  Raridades disponibles: COMUN, RARO, ULTRARARO, LEGENDARIO, ULTRALEGENDARIO
+#    → el dado cae en el 3% inicial  → recompensa Rara
+#    → cae entre 3% y 13%            → recompensa Común
+#    → cae por encima de 13%         → nada
 # ============================================================
 tiers:
   0:
     umbral: 64
+    requiere-permiso: false
     requiere-vip2: false
     recompensas:
-      - raridad: COMUN
+      - raridad: comun
         chance: 15.0
   1:
     umbral: 64
     requiere-vip2: false
     recompensas:
-      - raridad: COMUN
+      - raridad: comun
         chance: 12.0
   2:
     umbral: 64
     requiere-vip2: false
     recompensas:
-      - raridad: RARO
+      - raridad: raro
         chance: 3.0
-      - raridad: COMUN
+      - raridad: comun
         chance: 10.0
   3:
     umbral: 64
     requiere-vip2: false
     recompensas:
-      - raridad: RARO
+      - raridad: raro
         chance: 5.0
-      - raridad: COMUN
+      - raridad: comun
         chance: 8.0
   4:
     umbral: 64
     requiere-vip2: false
     recompensas:
-      - raridad: ULTRARARO
+      - raridad: ultrararo
         chance: 2.0
-      - raridad: RARO
+      - raridad: raro
         chance: 6.0
   5:
     umbral: 64
     requiere-vip2: false
     recompensas:
-      - raridad: ULTRARARO
+      - raridad: ultrararo
         chance: 3.0
-      - raridad: RARO
+      - raridad: raro
         chance: 4.0
   6:
     umbral: 64
     requiere-vip2: false
     recompensas:
-      - raridad: LEGENDARIO
+      - raridad: legendario
         chance: 1.0
-      - raridad: ULTRARARO
+      - raridad: ultrararo
         chance: 3.0
   7:
     umbral: 64
     requiere-vip2: true
     recompensas:
-      - raridad: LEGENDARIO
+      - raridad: legendario
         chance: 2.0
-      - raridad: ULTRARARO
+      - raridad: ultrararo
         chance: 2.0
   8:
     umbral: 32
     requiere-vip2: true
     recompensas:
-      - raridad: ULTRALEGENDARIO
+      - raridad: ultralegendario
         chance: 1.0
-      - raridad: LEGENDARIO
+      - raridad: legendario
         chance: 2.0
   9:
     umbral: 32
     requiere-vip2: true
     recompensas:
-      - raridad: ULTRALEGENDARIO
+      - raridad: ultralegendario
         chance: 1.0
-      - raridad: LEGENDARIO
+      - raridad: legendario
         chance: 1.5
   10:
     umbral: 32
     requiere-vip2: true
     recompensas:
-      - raridad: ULTRALEGENDARIO
+      - raridad: ultralegendario
         chance: 1.0
-      - raridad: LEGENDARIO
-        chance: 1.5
+      - raridad: legendario
+        chance: 1.0
   11:
     umbral: 32
     requiere-vip2: true
     recompensas:
-      - raridad: ULTRALEGENDARIO
+      - raridad: ultralegendario
         chance: 1.0
-      - raridad: LEGENDARIO
+      - raridad: legendario
         chance: 1.0
+
+
+# ============================================================
+# CATEGORÍAS — Cada categoría tiene su propio contador.
+#
+#  Puedes crear las que quieras (peces, mobs, cristales...).
+#  El id de la categoría es la clave (cultivos, minerales...).
+#
+#  nombre            → nombre visible en /sguilds stats
+#  activada          → false la desactiva sin borrarla
+#  mundos            → lista propia de mundos. Si no la pones, usa
+#                      la lista global de arriba.
+#  todos-los-mundos  → true activa la categoría en todos los mundos
+#  mensaje-bloqueado → mensaje al romper un bloque sin permiso.
+#                      Si no lo pones, usa mensajes.bloque-bloqueado
+#  tiers             → sobrescribe tiers globales solo para esta
+#                      categoría (opcional, mismo formato de arriba)
+#  bloques           → tier: [lista de materiales]
+#                      Un material puede repetirse en varias
+#                      categorías si están en mundos distintos.
+# ============================================================
+categorias:
+
+  cultivos:
+    nombre: "Cultivos"
+    activada: true
+    # Sin "mundos" propios, esta categoria usa la lista global de arriba.
+    # Descomenta para darle mundos exclusivos:
+    # mundos:
+    #   - cultivos
+    mensaje-bloqueado: "<#FF1493>&lSakura &c⛔ Bloque bloqueado"
+    bloques:
+      0: [WHEAT]
+      1: [CARROTS]
+      2: [POTATOES]
+      3: [BEETROOTS]
+      4: [PUMPKIN]
+      5: [MELON]
+      6: [NETHER_WART]
+      7: [COCOA]
+      8: [SUGAR_CANE]
+      9: [CACTUS]
+      10: [BAMBOO, KELP, KELP_PLANT, SWEET_BERRY_BUSH, BROWN_MUSHROOM, RED_MUSHROOM]
+
+  minerales:
+    nombre: "Minerales"
+    activada: true
+    # Sin "mundos" propios, esta categoria usa la lista global de arriba.
+    # Descomenta para darle mundos exclusivos:
+    # mundos:
+    #   - minas
+    mensaje-bloqueado: "<#FF1493>&lSakura &c⛔ Bloque bloqueado"
+    bloques:
+      0: [COAL_ORE, DEEPSLATE_COAL_ORE, COAL_BLOCK]
+      1: [COPPER_ORE, DEEPSLATE_COPPER_ORE, COPPER_BLOCK]
+      2: [IRON_ORE, DEEPSLATE_IRON_ORE, IRON_BLOCK]
+      3: [NETHER_QUARTZ_ORE]
+      4: [GOLD_ORE, DEEPSLATE_GOLD_ORE, NETHER_GOLD_ORE, GOLD_BLOCK]
+      5: [REDSTONE_ORE, DEEPSLATE_REDSTONE_ORE, REDSTONE_BLOCK]
+      6: [LAPIS_ORE, DEEPSLATE_LAPIS_ORE, LAPIS_BLOCK]
+      7: [AMETHYST_CLUSTER, AMETHYST_BLOCK]
+      8: [DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE, DIAMOND_BLOCK]
+      9: [EMERALD_ORE, DEEPSLATE_EMERALD_ORE, EMERALD_BLOCK]
+      10: [ANCIENT_DEBRIS, NETHERITE_BLOCK]
+
+  maderas:
+    nombre: "Maderas"
+    activada: true
+    # Sin "mundos" propios, esta categoria usa la lista global de arriba.
+    # Descomenta para darle mundos exclusivos:
+    # mundos:
+    #   - bosque
+    mensaje-bloqueado: "<#FF1493>&lSakura &c⛔ Bloque bloqueado"
+    bloques:
+      0: [OAK_LOG]
+      1: [SPRUCE_LOG]
+      2: [BIRCH_LOG]
+      3: [JUNGLE_LOG]
+      4: [ACACIA_LOG]
+      5: [DARK_OAK_LOG]
+      6: [MANGROVE_LOG]
+      7: [CHERRY_LOG]
+      8: [CRIMSON_STEM]
+      9: [WARPED_STEM]
